@@ -1,0 +1,28 @@
+{
+  "name": "dashboard",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@tailwindcss/vite": "^4.2.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
+    "lucide-react": "^0.574.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "recharts": "^3.7.0",
+    "tailwindcss": "^4.2.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
+  }
+}

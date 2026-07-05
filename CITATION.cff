@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "HF Titration Assistant: an explainable ML prototype for deterioration-risk scoring in hospital-at-home heart-failure care"
+abstract: >-
+  A research prototype that estimates short-term deterioration risk in
+  heart-failure patients under hospital-at-home care from the sliding-window
+  trajectory of their vitals, labs, and symptoms, with SHAP-based explanations
+  and a clinician-facing dashboard. Trained and evaluated on synthetic data and
+  small open-access clinical demo subsets; not clinically validated.
+type: software
+authors:
+  - family-names: Pöhl
+    given-names: Carl Luis
+    email: clpoehl@gmail.com
+    alias: cl-poehl
+version: "0.1.0"
+date-released: "2026-07-05"
+license: MIT
+keywords:
+  - heart failure
+  - hospital-at-home
+  - clinical decision support
+  - explainable AI
+  - SHAP
+  - gradient boosting
+  - deterioration prediction

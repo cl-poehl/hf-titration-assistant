@@ -1,0 +1,17 @@
+{
+  "auroc": 0.7847118355297507,
+  "auprc": 0.5845436138757713,
+  "auroc_ci95_low": 0.7516701195045428,
+  "auroc_ci95_high": 0.8159179113466264,
+  "optimal_threshold": 0.627235193455046,
+  "optimal_f1": 0.5895316760722173,
+  "medium_risk_sensitivity": 0.6341463414634146,
+  "medium_risk_specificity": 0.7802993722839208,
+  "medium_risk_ppv": 0.2553191489361702,
+  "high_risk_sensitivity": 0.43902439024390244,
+  "high_risk_specificity": 0.9932399806856591,
+  "high_risk_ppv": 0.8852459016393442,
+  "critical_risk_sensitivity": 0.4105691056910569,
+  "critical_risk_specificity": 0.9990342829550941,
+  "critical_risk_ppv": 0.9805825242718447
+}

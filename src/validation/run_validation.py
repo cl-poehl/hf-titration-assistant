@@ -29,6 +29,7 @@ from sklearn.metrics import (
     brier_score_loss,
     roc_auc_score,
 )
+from sklearn.impute import SimpleImputer
 from sklearn.model_selection import GroupShuffleSplit
 from sklearn.preprocessing import StandardScaler
 
@@ -117,11 +118,17 @@ def fit_candidate(Xtr, ytr):
 
 
 def fit_baselines(Xtr, ytr):
-    """Baseline B: penalised logistic regression on standardised features."""
-    scaler = StandardScaler().fit(Xtr)
+    """Baseline B: penalised logistic regression on median-imputed, standardised features.
+
+    Unlike the gradient-boosted candidate (which handles NaN natively), logistic
+    regression needs imputation; the imputer and scaler are fit on train only.
+    """
+    imp = SimpleImputer(strategy="median").fit(Xtr)
+    scaler = StandardScaler().fit(imp.transform(Xtr))
     lr = LogisticRegression(max_iter=1000, class_weight="balanced")
-    lr.fit(scaler.transform(Xtr), ytr)
-    return ("logistic_regression", lambda X: lr.predict_proba(scaler.transform(X))[:, 1])
+    lr.fit(scaler.transform(imp.transform(Xtr)), ytr)
+    return ("logistic_regression",
+            lambda X: lr.predict_proba(scaler.transform(imp.transform(X)))[:, 1])
 
 
 def run(features_path: Path) -> dict:

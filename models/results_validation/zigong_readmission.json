@@ -1,0 +1,37 @@
+{
+  "note": "Aggregate metrics only. Computed on the PhysioNet Zigong HF dataset (restricted access). No patient-level data is included here or anywhere in this repository, per the data-use agreement. Regenerate with src/validation/zigong_cohort.py + run_validation.py; see VALIDATION.md.",
+  "dataset": "Zigong Fourth People's Hospital HF cohort (PhysioNet, heart-failure-zigong v1.3)",
+  "n_patients": 2008,
+  "split_patients": {"train": 1404, "validation": 302, "test": 302},
+  "features": "27 curated admission-day clinical predictors + medication (GDMT-class) features, one-hot expanded to ~52 columns; leakage-guarded (outcome/discharge/emergency columns excluded)",
+  "primary_outcome": {
+    "definition": "readmission within 6 months",
+    "test_prevalence": 0.401,
+    "events_total": 773,
+    "gradient_boosted_trees": {"auroc": 0.649, "auroc_ci95": [0.58, 0.71], "auprc": 0.562, "brier": 0.238},
+    "logistic_baseline": {"auroc": 0.576, "auroc_ci95": [0.52, 0.64], "auprc": 0.466},
+    "isotonic_recalibrated": {"auroc": 0.616, "calibration_slope": 1.23, "brier": 0.230},
+    "published_benchmark_same_cohort": {
+      "auroc": 0.634, "auroc_ci95": [0.599, 0.646], "best_model": "logistic_regression",
+      "source": "Predicting Six-Month Re-Admission Risk in Heart Failure Patients Using Multiple Machine Learning Methods, J. Clin. Med. 2023;12(3):870 (same Zigong cohort, same outcome, same 70:30 held-out design)",
+      "comparison": "this project's 0.649 is on par (overlapping CIs); ~0.63-0.65 is the achievable ceiling on this cohort regardless of method"
+    }
+  },
+  "secondary_outcome": {
+    "definition": "readmission within 28 days",
+    "test_prevalence": 0.070,
+    "events_total": 140,
+    "gradient_boosted_trees": {"auroc": 0.68, "auroc_ci95": [0.55, 0.80], "auprc": 0.16},
+    "logistic_baseline": {"auroc": 0.65},
+    "note": "Underpowered (~21 test events); GBT does not clearly beat the baseline."
+  },
+  "medication_data_caveat": {
+    "note": "The medication table has only 25 unique drug names total and is a limited/curated list of unknown completeness (metoprolol is the only beta-blocker recorded; benazepril and valsartan the only RAASi; no SGLT2i/ARNI; no doses). These recorded-presence rates therefore cannot be read as GDMT prescribing rates or titration adequacy, and no guideline-adherence conclusion is drawn from them; used only as model inputs, which did not improve discrimination.",
+    "recorded_presence_rates_among_curated_list": {
+      "metoprolol_only_beta_blocker": 0.380,
+      "benazepril_or_valsartan_only_raasi": 0.383,
+      "spironolactone": 0.913,
+      "loop_diuretic": 0.961
+    }
+  }
+}

@@ -30,20 +30,25 @@ import pandas as pd
 # --- Column configuration (confirm against the Zigong variable description file) ---
 ID_COL = "inpatient.number"
 
-# Outcome to predict. Options in the dataset: 28 days / 3 months / 6 months
-# readmission, and the corresponding death columns. 28-day readmission is the
-# classic benchmark (cf. the AUROC 0.73-0.81 literature in DESIGN.md).
-LABEL_COL = "re.admission.within.28.days"
+# Outcome to predict (override with ZIGONG_LABEL). 6-month readmission is the
+# best-powered choice here (773 events / 2,008, ~18 events per variable); 28-day
+# readmission has only 140 events and the mortality columns 11-57, too few to model.
+LABEL_COL = os.environ.get("ZIGONG_LABEL", "re.admission.within.6.months")
 
 # Baseline predictors known to be admission-day measurements. This is a curated,
 # leakage-safe whitelist; extend it from the variable dictionary as desired. Only
 # columns present in the file are used (missing ones are skipped with a warning).
+# Deliberately kept small: with only ~140 readmission events, a ~25-predictor set
+# keeps events-per-variable defensible (TRIPOD+AI / PROBAST), whereas all ~150
+# columns would be ~1 EPV and overfit.
 DEFAULT_PREDICTORS = [
     "gender", "ageCat", "BMI", "weight", "height",
     "body.temperature", "pulse", "respiration",
     "systolic.blood.pressure", "diastolic.blood.pressure", "map",
     "type.of.heart.failure", "NYHA.cardiac.function.classification",
-    "Killip.grade", "GCS",
+    "Killip.grade", "GCS", "CCI.score",
+    "myocardial.infarction", "diabetes",
+    "moderate.to.severe.chronic.kidney.disease",
     "LVEF", "left.ventricular.end.diastolic.diameter.LV",
     "creatinine.enzymatic.method", "urea", "potassium", "sodium",
     "hemoglobin", "brain.natriuretic.peptide", "white.blood.cell",
@@ -53,9 +58,52 @@ DEFAULT_PREDICTORS = [
 # these as predictors, regardless of what the whitelist picks up.
 LEAKAGE_SUBSTRINGS = (
     "re.admission", "readmission", "death", "time.of.death",
-    "return.to.emergency", "destination", "discharge", "outcome",
-    "days.from.admission", "dischargeday", "los",
+    "return.to.emergency", "emergency", "destination", "discharge",
+    "outcome", "days.from.admission", "dischargeday", "los",
 )
+
+
+# Drug-name substrings → therapeutic class, for medication features derived from
+# dat_md.csv. The four GDMT pillars mirror the repo's GDMT engine (predictor.py).
+DRUG_CLASSES = {
+    "beta_blocker": ["metoprolol", "bisoprolol", "carvedilol", "nebivolol", "atenolol"],
+    "raasi": ["sacubitril", "enalapril", "captopril", "benazepril", "perindopril",
+              "ramipril", "lisinopril", "fosinopril", "imidapril",
+              "valsartan", "losartan", "irbesartan", "candesartan", "telmisartan", "olmesartan"],
+    "mra": ["spironolactone", "eplerenone"],
+    "sglt2i": ["dapagliflozin", "empagliflozin", "canagliflozin"],
+    "loop_diuretic": ["furosemide", "torasemide", "torsemide", "bumetanide"],
+    "digoxin": ["digoxin", "deslanoside", "digitalis"],
+    "inotrope": ["milrinone", "dobutamine", "dopamine", "levosimendan"],
+}
+GDMT_PILLARS = ("beta_blocker", "raasi", "mra", "sglt2i")
+
+
+def medication_features(md_csv: Path) -> pd.DataFrame:
+    """Per-admission medication features from dat_md.csv (drug names → class flags).
+
+    In-hospital medications are observed during the index stay, before the
+    post-discharge readmission window, so they are valid predictors. Returns a
+    frame indexed by patient_id with a polypharmacy count, per-class flags, and a
+    GDMT-pillar count (0-4) mirroring the repo's four-pillar engine.
+    """
+    md = pd.read_csv(md_csv)
+    id_col = next(c for c in md.columns if "inpatient" in c.lower())
+    name = md["Drug_name"].astype(str).str.lower()
+    md = md.assign(_name=name)
+
+    rows = {"patient_id": [], "n_medications": []}
+    for cls in DRUG_CLASSES:
+        rows[f"on_{cls}"] = []
+    for pid, grp in md.groupby(id_col):
+        rows["patient_id"].append(pid)
+        rows["n_medications"].append(grp["_name"].nunique())
+        for cls, kws in DRUG_CLASSES.items():
+            hit = grp["_name"].str.contains("|".join(kws), regex=True).any()
+            rows[f"on_{cls}"].append(int(hit))
+    out = pd.DataFrame(rows)
+    out["n_gdmt_pillars"] = out[[f"on_{p}" for p in GDMT_PILLARS]].sum(axis=1)
+    return out
 
 
 def _binarize(series: pd.Series) -> pd.Series:
@@ -127,8 +175,19 @@ def build() -> pd.DataFrame:
         pieces.append(pd.get_dummies(feats[cat].astype("string"), dummy_na=True))
     feats = pd.concat(pieces, axis=1) if pieces else pd.DataFrame(index=feats.index)
     feats = feats.dropna(axis=1, how="all")  # drop non-numeric cols that slipped into num
+    feats = feats.loc[:, feats.nunique(dropna=True) > 1]  # drop constant / empty-dummy columns
 
     out = pd.concat([out, feats.reset_index(drop=True)], axis=1)
+
+    # Merge medication features if dat_md.csv is available alongside the main CSV.
+    md_csv = Path(os.environ.get("ZIGONG_MD_CSV", csv.parent / "dat_md.csv"))
+    if md_csv.exists():
+        med = medication_features(md_csv)
+        out = out.merge(med, on="patient_id", how="left")
+        med_cols = [c for c in med.columns if c != "patient_id"]
+        out[med_cols] = out[med_cols].fillna(0)  # no records == not on that drug
+        print(f"[info] merged {len(med_cols)} medication features from {md_csv.name}")
+
     out = out.dropna(subset=["label"])
     out["label"] = out["label"].astype(int)
     return out

@@ -112,10 +112,18 @@ figure is small-sample overfitting, included only to prove the real-data ETL run
 end to end. The bundled dashboard and `/health` endpoint serve this demo model by
 design, so the reported number is the demo figure, not a benchmark.
 
-A defensible validation — a real cohort at scale, a held-out test set, calibration,
-baseline comparison, and TRIPOD+AI reporting — is specified in
-[`VALIDATION.md`](VALIDATION.md) and is the project's primary open item. Model
-artifacts are committed as pickles so the app runs without a training step.
+**A real-data check has been run.** On the open Zigong HF cohort (2,008 real
+patients), the same methodology reaches AUROC 0.65 (95% CI 0.58–0.71) for 6-month
+readmission — **on par with the published benchmark on the identical cohort** (best
+model AUC 0.634, *J. Clin. Med.* 2023), and honestly below the synthetic figure.
+Readmission on this data tops out in the low-to-mid 0.60s regardless of method, so
+the modest figure reflects the difficulty of the task, not the modelling. It
+validates the modelling/evaluation methodology, **not** the trajectory model (that
+data is cross-sectional). Full numbers, baseline, and caveats are in
+[`VALIDATION.md`](VALIDATION.md#track-a--result-executed).
+Validating the trajectory model itself remains the primary open item and needs
+credentialed time-series data. Model artifacts are committed as pickles so the app
+runs without a training step.
 Calibration curves, per-tier metrics, SHAP summaries, and feature-importance tables
 are in `models/results/` and `models/results_real/`.
 

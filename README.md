@@ -1,5 +1,12 @@
 # HF Titration Assistant
 
+[![CI](https://github.com/cl-poehl/hf-titration-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/cl-poehl/hf-titration-assistant/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688.svg?logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB.svg?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6.svg?logo=typescript&logoColor=white)
+
 **An explainable machine-learning prototype for deterioration-risk scoring in
 heart-failure patients under hospital-at-home care.**
 

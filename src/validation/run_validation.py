@@ -157,16 +157,26 @@ def run(features_path: Path) -> dict:
 
 
 def main() -> None:
+    import argparse
+
     base = Path(os.environ.get("HFTA_DATA_DIR", "data"))
-    features_path = base / "processed" / "features_mimic_full.parquet"
-    if not features_path.exists():
+    parser = argparse.ArgumentParser(description="Run the VALIDATION.md protocol on a real cohort.")
+    parser.add_argument(
+        "--features", type=Path,
+        default=base / "processed" / "features_mimic_full.parquet",
+        help="Features parquet (patient_id + label + predictors). "
+             "Zigong: build with src.validation.zigong_cohort → features_zigong.parquet. "
+             "MIMIC-IV: build_cohort.py → build_features.py → features_mimic_full.parquet.",
+    )
+    args = parser.parse_args()
+    if not args.features.exists():
         raise RuntimeError(
-            f"{features_path} not found. Build the real cohort first "
-            "(src/validation/build_cohort.py, then src/features/build_features.py), "
-            "using credentialed MIMIC-IV. See VALIDATION.md — no real data ships here."
+            f"{args.features} not found. Build a real cohort first — see VALIDATION.md. "
+            "No real data ships with this repository."
         )
-    report = run(features_path)
-    out = base.parent / "models" / "results_validation" / "report.json"
+    report = run(args.features)
+    tag = args.features.stem.replace("features_", "")
+    out = base.parent / "models" / "results_validation" / f"report_{tag}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2))
     print(json.dumps(report, indent=2))

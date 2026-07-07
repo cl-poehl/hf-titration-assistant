@@ -26,8 +26,10 @@ modest and heterogeneous across cohorts (AUROC ≈ 0.51–0.93), with 30-day
 readmission a comparatively difficult target [1,2,4]. Representative single-cohort
 studies report best-model AUROCs of roughly 0.73–0.81 (e.g. XGBoost AUC 0.763 on
 2,232 acute-HF admissions [1]; an ensemble at 0.81 [3]). HF Titration Assistant's 0.80 AUROC
-on its synthetic cohort sits within this range — but, being synthetic, it reflects
-internal consistency rather than clinical accuracy. Dynamic (time-varying)
+on its synthetic cohort sits within this range numerically, but is not comparable:
+it is a *self-referential signal-recovery check* (the label is derived from the same
+injected event the features see), not a measurement on real patients. It is reported
+to show the pipeline is wired correctly, not as clinical accuracy. Dynamic (time-varying)
 prediction from home telemonitoring has reached ≈0.80 AUROC and flags emerging
 risk earlier than nurse-led telesupport, albeit with sequence models rather than
 trees [5].
@@ -116,6 +118,12 @@ time series. Models are evaluated with AUROC (reported with a 95% confidence int
 1,000 patient-level bootstrap resamples), AUPRC, a calibration curve, and
 per-tier sensitivity / specificity / PPV. See [`README.md`](README.md#results)
 for reported numbers and their caveats.
+
+This machinery (grouped splits, bootstrap CIs) is correct, but it has only been
+run on synthetic and tiny-demo data, so it does not yet establish predictive
+validity. The protocol for a real, non-circular validation on a credentialed
+cohort — cohort definition, a held-out test set, calibration, baseline comparison,
+and TRIPOD+AI reporting — is written up in [`VALIDATION.md`](VALIDATION.md).
 
 ## Risk tiers and suggested actions
 

@@ -28,9 +28,18 @@ tree models (XGBoost, LightGBM) on 98 features engineered from the sliding-windo
 trajectory of a patient's vitals, labs, and patient-reported symptoms to score the
 risk of deterioration requiring escalation. Scores are stratified into four risk
 tiers (uncalibrated operating bands), each accompanied by SHAP-based factor
-attributions and a suggested clinical action. On a synthetic cohort of 2,000 patients, evaluated with
-strict patient-level splits, the model reaches an AUROC of 0.80. The system is
-released as a reproducible, file-based pipeline with a clinician-facing dashboard.
+attributions and a suggested clinical action.
+
+The contribution here is the **system and its methodology**, not a validated model:
+a reproducible, file-based feature → train → serve pipeline, a rule-based GDMT
+titration engine grounded in the ACC/AHA guideline, and a clinician-facing
+dashboard. Because no open dataset exists for the target hospital-at-home setting,
+quantitative evaluation is limited to a **synthetic signal-recovery check** — on a
+2,000-patient generated cohort with strict patient-level splits the pipeline
+recovers its designed signal at AUROC 0.80. That demonstrates the machinery is
+wired correctly; it is **not** evidence the model predicts real deterioration. What
+a defensible real-data validation would require is specified in
+[`VALIDATION.md`](VALIDATION.md).
 
 ## Background
 
@@ -78,32 +87,47 @@ remote-monitoring trial evidence is mixed (TIM-HF2 positive, BEAT-HF null). A fu
 
 ## Results
 
-| Cohort | Evaluation | AUROC (95% CI) | AUPRC | Interpretation |
-|---|---|---|---|---|
-| **Synthetic (2,000 patients)** | patient-level split | **0.80** (0.78–0.83) | 0.59 | Primary reported result. |
-| Open demo (MIMIC-IV + eICU) | ~70 test patients | 0.95–0.99 | 0.72–0.83 | **Overfit on a tiny cohort** — not a generalization estimate. |
+> [!WARNING]
+> **This project reports no validated predictive performance, and the numbers
+> below are not clinical accuracy.** No open dataset exists for the target
+> hospital-at-home setting, so the model has never been evaluated on adequate real
+> data. The two figures below are *methodology checks* — read them as such. The
+> protocol for a real validation is in [`VALIDATION.md`](VALIDATION.md).
 
-The 95% CI is from 1,000 patient-level bootstrap resamples of the test set.
+| Cohort | What the number actually measures | AUROC (95% CI) | AUPRC |
+|---|---|---|---|
+| Synthetic (2,000 patients) | **Signal-recovery check** — can the pipeline recover the deterioration signal the generator injects? Self-referential by construction. | 0.80 (0.78–0.83) | 0.59 |
+| Open demo (MIMIC-IV + eICU) | **ETL smoke test** on ~70 real patients — far too small to estimate performance; the high value is small-sample overfitting. | 0.95–0.99 | 0.72–0.83 |
 
-**The 0.80 AUROC on the synthetic cohort is the headline result.** The
-demo-cohort figure is high only because the test set is very small (~70 patients);
-it is included to validate the real-data ETL path, not as a performance claim.
-The bundled dashboard deliberately serves the real-demo model, because that is the
-model whose features match the real-demo patients on display — so the `/health`
-endpoint reports the demo-cohort AUROC by design. **Treat 0.80 as the benchmark,
-not the number `/health` prints.** Model artifacts are committed as pickles so the
-app runs without a training step (regenerate them with the pipeline below).
-Calibration curves, per-tier metrics (at the documented tier thresholds), SHAP
-summaries, and feature-importance tables are in `models/results/` and
-`models/results_real/`.
+**Why the synthetic 0.80 is not evidence.** The generator injects a deterioration
+signal into the same vitals/labs the features are built from, and the label is
+derived from the same event — so the model is recovering a pattern put in by hand.
+It lands at 0.80 rather than a trivial 1.0 only because that injected signal is
+partial and noisy, not because it reflects real physiology. It confirms the
+feature → train → serve loop is wired correctly; it says nothing about clinical
+accuracy. (The 95% CI is from 1,000 patient-level bootstrap resamples.)
+
+**Why the demo 0.95–0.99 is not evidence.** That test set is ~70 patients; the
+figure is small-sample overfitting, included only to prove the real-data ETL runs
+end to end. The bundled dashboard and `/health` endpoint serve this demo model by
+design, so the reported number is the demo figure, not a benchmark.
+
+A defensible validation — a real cohort at scale, a held-out test set, calibration,
+baseline comparison, and TRIPOD+AI reporting — is specified in
+[`VALIDATION.md`](VALIDATION.md) and is the project's primary open item. Model
+artifacts are committed as pickles so the app runs without a training step.
+Calibration curves, per-tier metrics, SHAP summaries, and feature-importance tables
+are in `models/results/` and `models/results_real/`.
 
 ## Scope and limitations
 
 This is an early-stage prototype. Its limitations are material and stated plainly:
 
-- **Synthetic training data.** The primary model is trained on generated data
-  whose correlations reflect design assumptions, not real physiology. The 0.80
-  AUROC should be read as an internal-consistency result, not clinical accuracy.
+- **Synthetic training data, self-referential evaluation.** The primary model is
+  trained on generated data whose correlations reflect design assumptions, not real
+  physiology, and its label is derived from the same injected event the features
+  see. The 0.80 AUROC is therefore a signal-recovery check, not clinical accuracy —
+  see [Results](#results) and [`VALIDATION.md`](VALIDATION.md).
 - **No prospective or external validation.** The model has never been evaluated
   on real, held-out clinical data at scale.
 - **Tiny real-data cohort.** The MIMIC-IV/eICU demo subsets are far too small for

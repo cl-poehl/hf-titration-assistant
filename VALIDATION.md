@@ -9,19 +9,66 @@ follows is the design that would.
 
 It is written to align with **TRIPOD+AI** [Collins et al., *BMJ* 2024] and to be
 checked for risk of bias against **PROBAST** [Wolff et al., *Ann Intern Med* 2019].
-The evaluation harness skeleton lives in [`src/validation/`](src/validation/) and
-runs only against credentialed data the user supplies; it ships no data.
+The evaluation harness lives in [`src/validation/`](src/validation/) and runs only
+against real data the user supplies (Zigong or MIMIC-IV); it ships no data.
 
 ## Why a new dataset is required
 
 The model targets **hospital-at-home (HaH)** heart-failure monitoring, for which no
 open dataset exists. The bundled MIMIC-IV / eICU **demo** subsets are (a) ICU, not
 home, (b) too short (median stay ≈ 2.7 days vs. a 30-day HaH window), and (c) tiny
-(~70 test patients). Training on synthetic and testing on the demo data would
-measure domain shift, not model quality. A defensible result needs a real cohort
-that is large enough and matched to a clearly defined task.
+(~70 test patients). A defensible result needs a real cohort that is large enough
+and matched to a clearly defined task.
 
-## Data source
+## Two tracks
+
+There is no single open dataset that both is large and matches the HaH trajectory
+setting, so validation is split into two independent tracks with different
+trade-offs. Do **Track A** first — it is a real result reachable in days.
+
+| | Track A — Zigong | Track B — MIMIC-IV |
+|---|---|---|
+| **Task** | Admission-level readmission | Trajectory-based deterioration |
+| **Access** | Restricted: login + DUA, **no** CITI/credentialing | Credentialed: CITI course + reference + review |
+| **Cohort** | 2,008 real HF patients | thousands (HF subset) |
+| **Data shape** | one row per admission (no time series) | real time series |
+| **Validates** | that the ML/eval methodology holds on real HF data | the sliding-window approach itself |
+| **Limitation** | not the trajectory model the app uses | ICU, not home (domain gap) |
+
+Track A cannot validate the sliding-window features (Zigong has no time series), but
+it does give an honest, literature-comparable readmission result on real patients —
+enough to show the modelling and evaluation are sound. Track B validates the
+trajectory thesis but needs credentialed data and carries an ICU-vs-home domain gap.
+
+## Track A — Zigong (admission-level readmission)
+
+**Dataset:** *Hospitalized patients with heart failure* (Zigong Fourth People's
+Hospital), PhysioNet, **Restricted Access** — a free login and a signed data-use
+agreement, **no** credentialing or CITI course. 2,008 patients, 166 baseline
+variables, readmission (28 day / 3 / 6 month) and mortality outcomes.
+
+**Task:** predict 28-day readmission (`re.admission.within.28.days`) from
+admission-day predictors — the classic HF-readmission benchmark (literature AUROC
+≈ 0.73–0.81, see [`DESIGN.md`](DESIGN.md#related-work)).
+
+**Steps:**
+1. Sign the DUA and download the dataset from PhysioNet.
+2. Build the cohort: `ZIGONG_CSV=/path/to/main.csv python -m src.validation.zigong_cohort`
+   → writes `data/processed/features_zigong.parquet`. Confirm the column names in
+   `zigong_cohort.py` against the shipped variable-description file; it prints the
+   columns it found and drops any outcome-derived column as a leakage guard.
+3. Evaluate: `python -m src.validation.run_validation --features data/processed/features_zigong.parquet`
+   → three-way patient-level split, held-out test, isotonic recalibration, a
+   logistic-regression baseline, and patient-level bootstrap CIs.
+4. Report the resulting AUROC / AUPRC / calibration **and the baseline** in the
+   README, replacing the synthetic placeholder as the project's real number.
+
+The methodology below (splits, metrics, calibration, baselines, reporting) applies
+to both tracks; only the cohort construction differs.
+
+## Track B — MIMIC-IV (trajectory monitoring)
+
+### Data source
 
 **Primary:** MIMIC-IV (full, credentialed) — access requires a free PhysioNet
 account, completion of the CITI *"Data or Specimens Only Research"* course, and
@@ -114,7 +161,12 @@ not hidden.
 
 ## Status
 
-Not started — blocked on credentialed data access. This file is the plan; the
-[`src/validation/`](src/validation/) skeleton is the harness it will run through.
-No result in this repository should be cited as clinical performance until this
-protocol has been executed and its numbers published here.
+- **Track A (Zigong):** ready to run — the harness (`run_validation.py`) and cohort
+  loader (`zigong_cohort.py`) are implemented and tested end-to-end on synthetic
+  inputs. The only remaining step is signing the DUA and downloading the data; no
+  credentialing is required.
+- **Track B (MIMIC-IV):** `build_cohort.py` is a skeleton; blocked on credentialed
+  access.
+
+Until one of these tracks has actually been run and its numbers published here, no
+result in this repository should be cited as clinical performance.

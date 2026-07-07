@@ -63,7 +63,7 @@ No automated test suites, linters, or formatters are configured.
 - **`src/features/build_features.py`** — Sliding-window feature extraction (98 features from vitals/labs/symptoms). Uses `--combined` flag for real clinical data with adaptive 3-day windows (vs 7-day default for synthetic).
 - **`src/models/train.py`** — XGBoost + LightGBM training with patient-level stratified splits (prevents data leakage across temporal windows of same patient).
 - **`src/data_generation/`** — Synthetic patient generator + MIMIC-IV/eICU ETL pipelines.
-- **`src/validation/`** — Skeleton for the planned real-data validation (see [`VALIDATION.md`](VALIDATION.md)). `run_validation.py` is a working, data-source-agnostic evaluation harness (three-way patient-level split, calibration, baselines, bootstrap CIs); `build_cohort.py` extracts an HF cohort from credentialed MIMIC-IV. Ships no data and is not part of the demo pipeline.
+- **`src/validation/`** — Real-data validation harness (see [`VALIDATION.md`](VALIDATION.md)). `run_validation.py` is a working, data-source-agnostic evaluator (three-way patient-level split, isotonic calibration, logistic baseline, bootstrap CIs); `zigong_cohort.py` builds an admission-level readmission cohort from the restricted-access **Zigong** dataset (Track A, runnable now); `build_cohort.py` is a skeleton for a trajectory cohort from credentialed **MIMIC-IV** (Track B). Ships no data and is not part of the demo pipeline.
 
 ### Frontend (`dashboard/`)
 

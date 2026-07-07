@@ -66,6 +66,50 @@ admission-day predictors — the classic HF-readmission benchmark (literature AU
 The methodology below (splits, metrics, calibration, baselines, reporting) applies
 to both tracks; only the cohort construction differs.
 
+### Track A — result (executed)
+
+Track A has been run end to end on the real Zigong cohort. Aggregate metrics are in
+[`models/results_validation/zigong_readmission.json`](models/results_validation/zigong_readmission.json);
+no patient-level data is committed (DUA).
+
+**Discrimination is modest and consistent with the literature.** On a held-out,
+patient-level test set, 6-month readmission (primary outcome, 773 events) reached
+**AUROC 0.65 (95% CI 0.58–0.71)**, AUPRC 0.56, versus a logistic-regression baseline
+at 0.58; isotonic recalibration corrected the probability calibration (slope
+0.36 → 1.23). A 28-day-readmission secondary analysis reached AUROC 0.68 but is
+underpowered (~21 test events) and does not clearly beat the baseline. Adding the
+medication/GDMT features did **not** improve discrimination.
+
+**Benchmark — on par with the published state of the art on this cohort.** A
+peer-reviewed study on the *identical* dataset and outcome (*Predicting Six-Month
+Re-Admission Risk in Heart Failure Patients…*, **J. Clin. Med. 2023;12(3):870**;
+same 2,008 patients, 773 six-month readmissions, same 70:30 held-out-test design,
+six models incl. XGBoost) reported a best-model **AUC of 0.634 (95% CI 0.599–0.646)**,
+with logistic regression as their top performer. This project's **0.649 (0.58–0.71)**
+is on par with that benchmark (heavily overlapping CIs). The takeaway is not that
+either model is "good" — it is that **~0.63–0.65 is the achievable discrimination
+on this cohort regardless of method**, so the modest figure reflects the difficulty
+of the task, not a modelling deficiency. (Their logistic model, 0.634, beat this
+project's logistic baseline, 0.58 — likely due to their dedicated 10-variable
+feature selection — while the gradient-boosted models land similarly in both.)
+
+**Caveat on the medication data.** GDMT-class features were derived from the
+medication table, but it contains only **25 unique drug names** in total — a
+limited, curated list (metoprolol is the only beta-blocker recorded; benazepril and
+valsartan the only RAAS inhibitors; no SGLT2i or ARNI; no doses), and the data
+dictionary does not document what it is meant to capture. It is therefore **not** a
+complete prescription record, so these features cannot be read as GDMT prescribing
+rates or titration adequacy — recorded drug *presence* over a formulary of unknown
+completeness establishes neither. They are used only as model inputs (which did not
+improve discrimination); no guideline-adherence conclusion is drawn from them.
+
+**Honest reading.** This is a real, non-circular result on real patients, and it
+validates that the modelling and evaluation methodology are sound. It does **not**
+validate the app's trajectory model (Zigong is cross-sectional), and the
+discrimination is only fair — HF readmission is a genuinely hard target, and ~0.65
+is where honest models on this kind of data land. Reported here in full, baseline
+and all, precisely because selectively omitting it would defeat the purpose.
+
 ## Track B — MIMIC-IV (trajectory monitoring)
 
 ### Data source
@@ -161,12 +205,12 @@ not hidden.
 
 ## Status
 
-- **Track A (Zigong):** ready to run — the harness (`run_validation.py`) and cohort
-  loader (`zigong_cohort.py`) are implemented and tested end-to-end on synthetic
-  inputs. The only remaining step is signing the DUA and downloading the data; no
-  credentialing is required.
+- **Track A (Zigong):** executed — see [Track A — result](#track-a--result-executed)
+  above and [`models/results_validation/zigong_readmission.json`](models/results_validation/zigong_readmission.json).
+  Modest, honestly reported (AUROC 0.65 for 6-month readmission); validates the
+  methodology on real data, not the trajectory model.
 - **Track B (MIMIC-IV):** `build_cohort.py` is a skeleton; blocked on credentialed
-  access.
+  access. This is the only path that would validate the sliding-window approach itself.
 
-Until one of these tracks has actually been run and its numbers published here, no
-result in this repository should be cited as clinical performance.
+The synthetic 0.80 remains a signal-recovery check, not clinical performance; the
+Zigong 0.65 is the only real-data number and is bounded as described above.
